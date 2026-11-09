@@ -8,7 +8,7 @@ const b64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace
 const un64 = s => Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((s.length+3)%4)), c=>c.charCodeAt(0));
 async function passwordMatches(password, salt, expected) {
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({name:"PBKDF2",salt:un64(salt),iterations:310000,hash:"SHA-256"},key,256);
+  const bits = await crypto.subtle.deriveBits({name:"PBKDF2",salt:un64(salt),iterations:100000,hash:"SHA-256"},key,256);
   const a = new Uint8Array(bits), b = un64(expected);
   return a.length===b.length && a.every((v,i)=>v===b[i]);
 }
