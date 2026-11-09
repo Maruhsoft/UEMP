@@ -76,7 +76,8 @@ The currently deployed Worker was uploaded through the Cloudflare API; no Wrangl
 
 | Method | Endpoint | Role |
 |---|---|---|
-| POST | `/api/auth/login` | Public (JSON) |\n| POST | `/login` | Public (HTML form fallback) |
+| POST | `/api/auth/login` | Public (JSON) |
+| POST | `/login` | Public (HTML form fallback) |
 | POST | `/api/auth/logout` | Authenticated session |
 | GET | `/api/me` | Authenticated |
 | GET | `/api/student/courses` | Student |
@@ -100,10 +101,10 @@ Default scale is configurable in `grading_scales`: A 70–100 (5), B 60–69 (4)
 ## Important MVP limitations
 
 - This is a demo MVP, not yet a production university deployment.
-- Apply migration 0002 before using the demo logins.
 - Course and academic setup is seeded; full admin CRUD for departments, programmes, sessions, courses, enrolments and user provisioning is not yet part of this first slice.
-- Turnstile, password reset/email delivery, MFA, rate limiting, CSRF tokens and login rate limiting, R2 document upload, queue consumers, PDF transcript generation and automated CI/CD deployment remain follow-up hardening tasks.
-- The live `/api/health` endpoint has returned HTTP 200 from Cloudflare Browser Rendering. The sign-in and role-by-role workflow checks remain in the manual smoke-test queue; deployment and database verification alone do not establish that every browser workflow passes.\n- Review the security checklist before onboarding real users.
+- Turnstile, password reset/email delivery, MFA, robust login rate limiting, CSRF tokens, R2 document upload, queue consumers, PDF transcript generation and automated CI/CD deployment remain follow-up hardening tasks.
+- The live `/api/health` endpoint has returned HTTP 200 from Cloudflare Browser Rendering. The sign-in and role-by-role workflow checks remain in the manual smoke-test queue; deployment and database verification alone do not establish that every browser workflow passes.
+- Review the security checklist before onboarding real users.
 
 ## Security notes
 
