@@ -38,6 +38,8 @@ async function requireUser(request,env,roles) {
 }
 async function api(request,env) {
   const url=new URL(request.url), path=url.pathname, method=request.method;
+  const origin=request.headers.get("Origin");
+  if(method==="POST" && origin && origin!==url.origin) return fail("Cross-origin request blocked.",403);
   if(method==="POST" && path==="/api/auth/login") {
     const data=await body(request), email=String(data.email||"").trim().toLowerCase(), password=String(data.password||"");
     if(!email || !password || password.length>200) return fail("Enter your email and password.");
@@ -77,9 +79,12 @@ async function api(request,env) {
     if(!current) return fail("No active semester is configured.");
     const existing=await env.DB.prepare("SELECT COUNT(*) n FROM course_registrations r JOIN course_offerings o ON o.id=r.offering_id WHERE r.student_id=? AND o.semester_id=?").bind(user.id,current.id).first();
     const unique=[...new Set(offeringIds.map(String))];
-    if(existing.n+unique.length>30) return fail("Registration exceeds the 30-course safety limit.");
+    const already=await env.DB.prepare("SELECT offering_id FROM course_registrations r JOIN course_offerings o ON o.id=r.offering_id WHERE r.student_id=? AND o.semester_id=?").bind(user.id,current.id).all();
+    const registered=new Set(already.results.map(x=>x.offering_id));
+    const additions=unique.filter(oid=>!registered.has(oid));
+    if(existing.n+additions.length>30) return fail("Registration exceeds the 30-course safety limit.");
     const ops=[];
-    for(const oid of unique){
+    for(const oid of additions){
       const valid=await env.DB.prepare("SELECT o.id FROM course_offerings o JOIN courses c ON c.id=o.course_id WHERE o.id=? AND o.semester_id=? AND c.level=? AND (SELECT COUNT(*) FROM course_registrations x WHERE x.offering_id=o.id)<o.capacity").bind(oid,current.id,student.level).first();
       if(!valid) return fail("One or more selected courses are unavailable for your level or are full.");
       ops.push(env.DB.prepare("INSERT OR IGNORE INTO course_registrations(id,student_id,offering_id) VALUES(?,?,?)").bind(id(),user.id,oid));
@@ -117,14 +122,19 @@ async function api(request,env) {
     const submissionId=old?.id||id();
     const validStudents=await env.DB.prepare("SELECT student_id FROM course_registrations WHERE offering_id=?").bind(offeringId).all();
     const allowed=new Set(validStudents.results.map(x=>x.student_id));
+    if(submit && entries.length!==allowed.size) return fail("Submit a score for every registered student before sending results for review.");
+    const seen=new Set();
     const statements=[];
     if(old) statements.push(env.DB.prepare("DELETE FROM result_entries WHERE submission_id=?").bind(submissionId));
     else statements.push(env.DB.prepare("INSERT INTO result_submissions(id,offering_id,lecturer_id,status) VALUES(?,?,?,'draft')").bind(submissionId,offeringId,user.id));
     for(const entry of entries){
+      if(entry.ca_score==="" || entry.exam_score==="") return fail("Enter both CA and examination scores for every student.");
       const ca=Number(entry.ca_score), exam=Number(entry.exam_score);
-      if(!allowed.has(entry.student_id)||!Number.isFinite(ca)||!Number.isFinite(exam)||ca<0||ca>30||exam<0||exam>70) return fail("Invalid student or score. CA must be 0–30 and exam 0–70.");
+      if(!allowed.has(entry.student_id)||seen.has(entry.student_id)||!Number.isFinite(ca)||!Number.isFinite(exam)||ca<0||ca>30||exam<0||exam>70) return fail("Invalid student or score. CA must be 0–30 and exam 0–70.");
+      seen.add(entry.student_id);
       const total=ca+exam;
       const grade=await env.DB.prepare("SELECT grade,grade_point FROM grading_scales WHERE ? BETWEEN min_score AND max_score").bind(total).first();
+      if(!grade) return fail("The configured grading scale does not cover this score. Contact the administrator.");
       statements.push(env.DB.prepare("INSERT INTO result_entries(id,submission_id,student_id,ca_score,exam_score,total_score,grade,grade_point) VALUES(?,?,?,?,?,?,?,?)").bind(id(),submissionId,entry.student_id,ca,exam,total,grade.grade,grade.grade_point));
     }
     statements.push(env.DB.prepare("UPDATE result_submissions SET status=?,submitted_at=?,feedback=NULL WHERE id=?").bind(submit?"submitted":"draft",submit?new Date().toISOString():null,submissionId));
@@ -141,9 +151,9 @@ async function api(request,env) {
   if(method==="GET" && path==="/api/admin/submission") {
     if(!["admin","department_admin"].includes(user.role)) return fail("Forbidden",403);
     const sid=url.searchParams.get("id");
-    const rows=await env.DB.prepare("SELECT re.student_id,u.full_name,st.matric_no,re.ca_score,re.exam_score,re.total_score,re.grade,re.grade_point FROM result_entries re JOIN students st ON st.user_id=re.student_id JOIN users u ON u.id=st.user_id WHERE re.submission_id=? ORDER BY st.matric_no").bind(sid).all();
     const scope=await env.DB.prepare("SELECT c.department_id FROM result_submissions rs JOIN course_offerings o ON o.id=rs.offering_id JOIN courses c ON c.id=o.course_id WHERE rs.id=?").bind(sid).first();
     if(!scope || (user.role==="department_admin" && scope.department_id!==user.department_id)) return fail("Submission not found",404);
+    const rows=await env.DB.prepare("SELECT re.student_id,u.full_name,st.matric_no,re.ca_score,re.exam_score,re.total_score,re.grade,re.grade_point FROM result_entries re JOIN students st ON st.user_id=re.student_id JOIN users u ON u.id=st.user_id WHERE re.submission_id=? ORDER BY st.matric_no").bind(sid).all();
     return json({ok:true,entries:rows.results});
   }
   if(method==="POST" && path==="/api/admin/review") {
@@ -155,6 +165,8 @@ async function api(request,env) {
     const next=decision==="approve"?"approved":decision==="reject"?"rejected":"reopened";
     if(decision==="approve" && row.status!=="submitted") return fail("Only submitted results can be approved.",409);
     if(decision==="reject" && row.status!=="submitted") return fail("Only submitted results can be rejected.",409);
+    if(decision==="reject" && !String(feedback).trim()) return fail("Feedback is required when rejecting results.");
+    if(decision==="reopen" && !["approved","rejected"].includes(row.status)) return fail("Only approved or rejected results can be reopened.",409);
     await env.DB.prepare("UPDATE result_submissions SET status=?,feedback=?,reviewed_by=?,reviewed_at=? WHERE id=?").bind(next,String(feedback).slice(0,1000),user.id,new Date().toISOString(),submissionId).run();
     await audit(env,user,"admin.results."+decision,"result_submission",submissionId,{feedback});
     return json({ok:true,message:"Review action recorded."});
@@ -167,10 +179,11 @@ async function api(request,env) {
   }
   if(method==="GET" && path==="/api/admin/overview") {
     if(!["admin","department_admin"].includes(user.role)) return fail("Forbidden",403);
+    const deptFilter=user.role==="department_admin"?" WHERE u.department_id=?":"";
     const [students,lecturers,courses,pending]=await Promise.all([
-      env.DB.prepare("SELECT COUNT(*) n FROM students").first(),
-      env.DB.prepare("SELECT COUNT(*) n FROM lecturers").first(),
-      env.DB.prepare("SELECT COUNT(*) n FROM courses").first(),
+      env.DB.prepare("SELECT COUNT(*) n FROM students st JOIN users u ON u.id=st.user_id"+deptFilter).bind(...(user.role==="department_admin"?[user.department_id]:[])).first(),
+      env.DB.prepare("SELECT COUNT(*) n FROM lecturers l JOIN users u ON u.id=l.user_id"+deptFilter).bind(...(user.role==="department_admin"?[user.department_id]:[])).first(),
+      env.DB.prepare("SELECT COUNT(*) n FROM courses"+(user.role==="department_admin"?" WHERE department_id=?":"")).bind(...(user.role==="department_admin"?[user.department_id]:[])).first(),
       env.DB.prepare("SELECT COUNT(*) n FROM result_submissions rs JOIN course_offerings o ON o.id=rs.offering_id JOIN courses c ON c.id=o.course_id WHERE rs.status='submitted'"+(user.role==="department_admin"?" AND c.department_id=?":"")).bind(...(user.role==="department_admin"?[user.department_id]:[])).first()
     ]);
     return json({ok:true,stats:{students:students.n,lecturers:lecturers.n,courses:courses.n,pending:pending.n}});
@@ -225,7 +238,13 @@ async function formLogin(request,env) {
  async fetch(request,env) {
   const url=new URL(request.url);
   if(url.pathname==="/login" && request.method==="POST") return formLogin(request,env);
-  if(url.pathname.startsWith("/api/")) return api(request,env);
+  if(url.pathname.startsWith("/api/")) {
+    try { return await api(request,env); }
+    catch(error) {
+      console.error(JSON.stringify({event:"uemp_api_error",path:url.pathname,message:String(error?.message||error)}));
+      return json({ok:false,error:"The request could not be completed. Please try again."},500);
+    }
+  }
   if(request.method!=="GET") return new Response("Method not allowed",{status:405});
   return new Response(page,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","X-Frame-Options":"DENY","Content-Security-Policy":"default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
  }
