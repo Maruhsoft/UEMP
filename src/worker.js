@@ -17,9 +17,32 @@ function cookieValue(request) {
   const part=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith(COOKIE+"="));
   return part ? decodeURIComponent(part.slice(COOKIE.length+1)) : null;
 }
+
+async function seedDemo(env) {
+  if (await env.KV.get("uemp:demo-seeded")) return;
+  const password = "UEMP-Demo-2026!";
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const derived = await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},key,256);
+  const saltText = b64(salt), hashText = b64(derived);
+  const rows = [
+    ["user-admin","admin@uemp.demo","UEMP Demo Administrator","admin"],
+    ["user-hod","hod@uemp.demo","Dr. Ada Department Admin","department_admin"],
+    ["user-lecturer","lecturer@uemp.demo","Dr. Tunde Lecturer","lecturer"],
+    ["user-student","student@uemp.demo","Chika Okafor","student"]
+  ];
+  const statements = rows.map(([uid,email,name,role]) => env.DB.prepare("INSERT INTO users(id,email,full_name,password_salt,password_hash,role,department_id) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,is_active=1").bind(uid,email,name,saltText,hashText,role,"dept-cs"));
+  statements.push(env.DB.prepare("INSERT OR IGNORE INTO lecturers(user_id,staff_no) VALUES('user-lecturer','CSC/STAFF/001')"));
+  statements.push(env.DB.prepare("INSERT OR IGNORE INTO students(user_id,matric_no,program_id,level) VALUES('user-student','UEMP/2023/001','prog-cs',300)"));
+  for (const [cid,code,title,units] of [["course-csc301","CSC301","Data Structures and Algorithms",3],["course-csc303","CSC303","Database Management Systems",3],["course-mth301","MTH301","Numerical Methods",2],["course-csc305","CSC305","Operating Systems",3]]) statements.push(env.DB.prepare("INSERT OR IGNORE INTO courses(id,code,title,units,department_id,level) VALUES(?,?,?,?,?,300)").bind(cid,code,title,units,"dept-cs"));
+  for (const [oid,cid] of [["off-csc301","course-csc301"],["off-csc303","course-csc303"],["off-mth301","course-mth301"],["off-csc305","course-csc305"]]) statements.push(env.DB.prepare("INSERT OR IGNORE INTO course_offerings(id,course_id,semester_id,lecturer_id,capacity) VALUES(?,?, 'sem-2026-1','user-lecturer',120)").bind(oid,cid));
+  for (const [rid,oid] of [["reg-demo-1","off-csc301"],["reg-demo-2","off-csc303"],["reg-demo-3","off-mth301"]]) statements.push(env.DB.prepare("INSERT OR IGNORE INTO course_registrations(id,student_id,offering_id) VALUES(?,'user-student',?)").bind(rid,oid));
+  await env.DB.batch(statements);
+  await env.KV.put("uemp:demo-seeded","1");
+}
 async function currentUser(request, env) {
   const token=cookieValue(request); if(!token) return null;
-  const session=await env.UEMP_KV.get("session:"+token,"json");
+  const session=await env.KV.get("session:"+token,"json");
   if(!session) return null;
   return await env.DB.prepare("SELECT id,email,full_name,role,department_id FROM users WHERE id=? AND is_active=1").bind(session.userId).first();
 }
@@ -43,12 +66,12 @@ async function api(request,env) {
     const user=await env.DB.prepare("SELECT id,email,full_name,password_salt,password_hash,role FROM users WHERE email=? AND is_active=1").bind(email).first();
     if(!user || !await passwordMatches(password,user.password_salt,user.password_hash)) return fail("Invalid email or password.",401);
     const token=b64(crypto.getRandomValues(new Uint8Array(32)));
-    await env.UEMP_KV.put("session:"+token,JSON.stringify({userId:user.id}),{expirationTtl:SESSION_SECONDS});
+    await env.KV.put("session:"+token,JSON.stringify({userId:user.id}),{expirationTtl:SESSION_SECONDS});
     await audit(env,user,"auth.login","session",token.slice(0,12));
     return json({ok:true,user:{id:user.id,email:user.email,name:user.full_name,role:user.role}},200,{"Set-Cookie":COOKIE+"="+encodeURIComponent(token)+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age="+SESSION_SECONDS});
   }
   if(method==="POST" && path==="/api/auth/logout") {
-    const token=cookieValue(request); if(token) await env.UEMP_KV.delete("session:"+token);
+    const token=cookieValue(request); if(token) await env.KV.delete("session:"+token);
     return json({ok:true},200,{"Set-Cookie":COOKIE+"=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"});
   }
   const user=await currentUser(request,env);
@@ -206,7 +229,7 @@ init();
 export default {
  async fetch(request,env) {
   const url=new URL(request.url);
-  if(url.pathname.startsWith("/api/")) return api(request,env);
+  await seedDemo(env);\n  if(url.pathname.startsWith("/api/")) return api(request,env);
   if(request.method!=="GET") return new Response("Method not allowed",{status:405});
   return new Response(page,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","X-Frame-Options":"DENY","Content-Security-Policy":"default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
  }
