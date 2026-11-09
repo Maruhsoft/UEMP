@@ -20,6 +20,10 @@ Run against the deployed origin after applying migrations 0001 and 0002.
 - [ ] Department administrator can inspect only submissions in their department.
 - [ ] Department administrator can approve or reject a submitted result.
 - [ ] Department administrator overview counts are restricted to their department.
+- [ ] Department administrator can view but cannot change the grading scale.
+- [ ] System administrator can update the grading scale only when bands cover 0–100 without gaps or overlaps.
+- [ ] Grade labels must be unique and grade points must remain between 0 and 5.
+- [ ] A grade used by existing result records cannot be removed.
 - [ ] Rejected results require feedback.
 - [ ] Approved results appear on the student result endpoint; unapproved results do not.
 - [ ] Reopening a rejected or approved submission allows lecturer edits; reopening an unsubmitted draft is rejected.
