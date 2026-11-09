@@ -14,7 +14,7 @@ A Cloudflare Workers + D1 + KV MVP for student course registration, lecturer res
 2. **Lecturer** — assigned-course list, registered-student roster, CA (0–30) and exam (0–70) score entry, server-calculated totals and grades, draft save, submit for review, submitted-result lock.
 3. **Department administrator / administrator** — department-scoped submission queue, score-sheet review, approve, reject with feedback, reopen, and publication to student result endpoints.
 4. **Administration** — system administrator can configure grading bands with complete 0–100 coverage, no gaps/overlaps, grade-point validation and protection against deleting grades used by existing results. Department administrators can view the active scale.
-5. **Shared** — PBKDF2-SHA256 password verification (310,000 iterations), HttpOnly/Secure/SameSite session cookie, KV-backed 8-hour sessions, backend role checks, same-origin checks on state-changing API requests, parameterized D1 queries, escaped dynamic table content, API error boundary, audit log writes, and five-point weighted CGPA calculation. The sign-in form now uses POST as a no-JavaScript fallback; credentials are not submitted in the URL.
+5. **Shared** — PBKDF2-SHA256 password verification (100,000 iterations; maximum supported by Workers Web Crypto), HttpOnly/Secure/SameSite session cookie, KV-backed 8-hour sessions, backend role checks, same-origin checks on state-changing API requests, parameterized D1 queries, escaped dynamic table content, API error boundary, audit log writes, and five-point weighted CGPA calculation. The sign-in form now uses POST as a no-JavaScript fallback; credentials are not submitted in the URL.
 
 ## Cloudflare resources
 
@@ -34,6 +34,7 @@ Migrations are in `migrations/` and should be applied in numeric order:
 
 1. `0001_initial_schema.sql` — tables, constraints, indexes, department/program/session/semester and grading scale.
 2. `0002_demo_seed.sql` — fictitious Computer Science department, student, lecturer, administrator accounts, course offerings and registrations.
+3. `0003_worker_compatible_demo_passwords.sql` — updates existing demo accounts to a PBKDF2-SHA256 hash compatible with Cloudflare Workers Web Crypto.
 
 Both migrations have now been applied to the live D1 database. Verified live counts: 4 users, 1 student, 1 lecturer, 4 courses, 4 course offerings and 3 course registrations. Foreign-key check returned no violations. The seed uses a shared demo-only password and must never be reused in a production environment.
 
