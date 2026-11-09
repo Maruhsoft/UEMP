@@ -1,10 +1,10 @@
 -- DEMO ONLY. All accounts share this non-production password: UEMP-Demo-2026!
 -- PBKDF2-SHA256, 310000 iterations; change these credentials before any real deployment.
-INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id) VALUES
+INSERT INTO users(id,email,full_name,password_salt,password_hash,role,department_id) VALUES
 ('user-admin','admin@uemp.demo','UEMP Demo Administrator','82pl565U9t_q7FfX3RvYIA','rs3c2sgsHuVhkRGHbXiQQap8pHQnwg69b9nCoaBA3Ps','admin','dept-cs'),
 ('user-hod','hod@uemp.demo','Dr. Ada Department Admin','82pl565U9t_q7FfX3RvYIA','rs3c2sgsHuVhkRGHbXiQQap8pHQnwg69b9nCoaBA3Ps','department_admin','dept-cs'),
 ('user-lecturer','lecturer@uemp.demo','Dr. Tunde Lecturer','82pl565U9t_q7FfX3RvYIA','rs3c2sgsHuVhkRGHbXiQQap8pHQnwg69b9nCoaBA3Ps','lecturer','dept-cs'),
-('user-student','student@uemp.demo','Chika Okafor','82pl565U9t_q7FfX3RvYIA','rs3c2sgsHuVhkRGHbXiQQap8pHQnwg69b9nCoaBA3Ps','student','dept-cs');
+('user-student','student@uemp.demo','Chika Okafor','82pl565U9t_q7FfX3RvYIA','rs3c2sgsHuVhkRGHbXiQQap8pHQnwg69b9nCoaBA3Ps','student','dept-cs') ON CONFLICT(id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,is_active=1;
 INSERT OR IGNORE INTO lecturers(user_id,staff_no) VALUES ('user-lecturer','CSC/STAFF/001');
 INSERT OR IGNORE INTO students(user_id,matric_no,program_id,level) VALUES ('user-student','UEMP/2023/001','prog-cs',300);
 INSERT OR IGNORE INTO courses(id,code,title,units,department_id,level) VALUES
