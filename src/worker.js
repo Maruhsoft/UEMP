@@ -171,6 +171,32 @@ async function api(request,env) {
     await audit(env,user,"admin.results."+decision,"result_submission",submissionId,{feedback});
     return json({ok:true,message:"Review action recorded."});
   }
+  if(method==="GET" && path==="/api/admin/grading-scale") {
+    if(!["admin","department_admin"].includes(user.role)) return fail("Forbidden",403);
+    const rows=await env.DB.prepare("SELECT grade,min_score,max_score,grade_point FROM grading_scales ORDER BY min_score").all();
+    return json({ok:true,grades:rows.results});
+  }
+  if(method==="POST" && path==="/api/admin/grading-scale") {
+    if(user.role!=="admin") return fail("Only the system administrator can change the grading scale.",403);
+    const data=await body(request), raw=data.grades;
+    if(!Array.isArray(raw)||raw.length<2||raw.length>12) return fail("Provide between 2 and 12 grading bands.");
+    const grades=raw.map(x=>({grade:String(x.grade||"").trim().toUpperCase(),min_score:Number(x.min_score),max_score:Number(x.max_score),grade_point:Number(x.grade_point)})).sort((a,b)=>a.min_score-b.min_score);
+    if(grades.some(x=>! /^[A-F][+-]?$/.test(x.grade)||!Number.isInteger(x.min_score)||!Number.isInteger(x.max_score)||x.min_score<0||x.max_score>100||x.min_score>x.max_score||!Number.isFinite(x.grade_point)||x.grade_point<0||x.grade_point>5)) return fail("Each band needs a unique A–F grade, valid score range and grade point from 0 to 5.");
+    if(new Set(grades.map(x=>x.grade)).size!==grades.length) return fail("Grade labels must be unique.");
+    if(grades[0].min_score!==0||grades[grades.length-1].max_score!==100||grades.some((x,i)=>i>0&&x.min_score!==grades[i-1].max_score+1)) return fail("Grading bands must cover every score from 0 to 100 without gaps or overlaps.");
+    const existing=await env.DB.prepare("SELECT grade FROM grading_scales").all();
+    const retained=new Set(grades.map(x=>x.grade));
+    const removed=existing.results.map(x=>x.grade).filter(g=>!retained.has(g));
+    for(const grade of removed){
+      const used=await env.DB.prepare("SELECT COUNT(*) n FROM result_entries WHERE grade=?").bind(grade).first();
+      if(used.n>0) return fail("Cannot remove grade "+grade+" because existing result records use it.");
+    }
+    const statements=grades.map(x=>env.DB.prepare("INSERT INTO grading_scales(grade,min_score,max_score,grade_point) VALUES(?,?,?,?) ON CONFLICT(grade) DO UPDATE SET min_score=excluded.min_score,max_score=excluded.max_score,grade_point=excluded.grade_point").bind(x.grade,x.min_score,x.max_score,x.grade_point));
+    for(const grade of removed) statements.push(env.DB.prepare("DELETE FROM grading_scales WHERE grade=?").bind(grade));
+    await env.DB.batch(statements);
+    await audit(env,user,"admin.grading_scale.update","grading_scale","default",{grades});
+    return json({ok:true,message:"Grading scale updated.",grades});
+  }
   if(method==="GET" && path==="/api/student/results") {
     if(user.role!=="student") return fail("Forbidden",403);
     const rows=await env.DB.prepare("SELECT c.code,c.title,c.units,re.total_score,re.grade,re.grade_point FROM result_entries re JOIN result_submissions rs ON rs.id=re.submission_id AND rs.status='approved' JOIN course_offerings o ON o.id=rs.offering_id JOIN courses c ON c.id=o.course_id WHERE re.student_id=? ORDER BY c.code").bind(user.id).all();
