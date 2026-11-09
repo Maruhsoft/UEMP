@@ -258,6 +258,7 @@ async function formLogin(request,env) {
 export default {
  async fetch(request,env) {
   const url=new URL(request.url);
+  if(url.pathname==="/" && request.method==="GET" && (url.searchParams.has("email") || url.searchParams.has("password"))) return new Response(null,{status:303,headers:{"Location":"/","Cache-Control":"no-store","Referrer-Policy":"no-referrer"}});
   if(url.pathname==="/app.js" && request.method==="GET") return new Response(appScript,{headers:{"Content-Type":"application/javascript; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
   if(url.pathname==="/login" && request.method==="POST") {
     try { return await formLogin(request,env); }
@@ -274,6 +275,6 @@ export default {
     }
   }
   if(request.method!=="GET") return new Response("Method not allowed",{status:405});
-  return new Response(page,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","X-Frame-Options":"DENY","Content-Security-Policy":"default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
+  return new Response(page,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer","X-Frame-Options":"DENY","Content-Security-Policy":"default-src 'self'; style-src 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
  }
 };
