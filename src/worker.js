@@ -128,7 +128,7 @@ async function api(request,env) {
     if(old) statements.push(env.DB.prepare("DELETE FROM result_entries WHERE submission_id=?").bind(submissionId));
     else statements.push(env.DB.prepare("INSERT INTO result_submissions(id,offering_id,lecturer_id,status) VALUES(?,?,?,'draft')").bind(submissionId,offeringId,user.id));
     for(const entry of entries){
-      if(entry.ca_score==="" || entry.exam_score==="") return fail("Enter both CA and examination scores for every student.");
+      if(entry.ca_score===null || entry.ca_score===undefined || String(entry.ca_score).trim()==="" || entry.exam_score===null || entry.exam_score===undefined || String(entry.exam_score).trim()==="") return fail("Enter both CA and examination scores for every student.");
       const ca=Number(entry.ca_score), exam=Number(entry.exam_score);
       if(!allowed.has(entry.student_id)||seen.has(entry.student_id)||!Number.isFinite(ca)||!Number.isFinite(exam)||ca<0||ca>30||exam<0||exam>70) return fail("Invalid student or score. CA must be 0–30 and exam 0–70.");
       seen.add(entry.student_id);
@@ -219,6 +219,8 @@ init();
 </script></body></html>`;
 
 async function formLogin(request,env) {
+  const origin=request.headers.get("Origin");
+  if(origin && origin!==new URL(request.url).origin) return new Response("Cross-origin request blocked.",{status:403});
   let form;
   try { form=await request.formData(); } catch { return new Response("Invalid sign-in request.",{status:400}); }
   const email=String(form.get("email")||"").trim().toLowerCase();
@@ -237,7 +239,13 @@ async function formLogin(request,env) {
 \nexport default {
  async fetch(request,env) {
   const url=new URL(request.url);
-  if(url.pathname==="/login" && request.method==="POST") return formLogin(request,env);
+  if(url.pathname==="/login" && request.method==="POST") {
+    try { return await formLogin(request,env); }
+    catch(error) {
+      console.error(JSON.stringify({event:"uemp_form_login_error",message:String(error?.message||error)}));
+      return new Response("Sign-in is temporarily unavailable. Please try again.",{status:500,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"}});
+    }
+  }
   if(url.pathname.startsWith("/api/")) {
     try { return await api(request,env); }
     catch(error) {
