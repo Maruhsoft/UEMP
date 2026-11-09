@@ -1,6 +1,7 @@
 
 let me=null, currentOffering=null;
-const el=id=>document.getElementById(id);\nconst esc=value=>String(value??'').replace(/[&<>"']/g,ch=>ch==='&'?'&amp;':ch==='<'?'&lt;':ch==='>'?'&gt;':ch==='"'?'&quot;':'&#39;');
+const el=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>ch==='&'?'&amp;':ch==='<'?'&lt;':ch==='>'?'&gt;':ch==='"'?'&quot;':'&#39;');
 async function api(path,opts={}){const r=await fetch(path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
 function msg(t,good=false){el('toast').innerHTML='<div class="notice '+(good?'success':'error')+'">'+t+'</div>';setTimeout(()=>el('toast').innerHTML='',4500)}
 document.getElementById('loginform').onsubmit=async e=>{e.preventDefault();el('loginmsg').textContent='Signing in…';try{const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});me=d.user;await load()}catch(err){el('loginmsg').textContent=err.message}};
