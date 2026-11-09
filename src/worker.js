@@ -1,5 +1,9 @@
 const COOKIE = "uemp_session";
 const SESSION_SECONDS = 60 * 60 * 8;
+const DEMO_OLD_SALT = "82pl565U9t_q7FfX3RvYIA";
+const DEMO_OLD_HASH = "rs3c2sgsHuVhkRGHbXiQQap8pHQnwg69b9nCoaBA3Ps";
+const DEMO_NEW_SALT = "WdsprOsw3M_KepzLmyqi3w";
+const DEMO_NEW_HASH = "JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc";
 const corsHeaders = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const json = (data, status=200, extra={}) => new Response(JSON.stringify(data), {status, headers:{...corsHeaders,...extra}});
 const id = () => crypto.randomUUID();
@@ -11,6 +15,10 @@ async function passwordMatches(password, salt, expected) {
   const bits = await crypto.subtle.deriveBits({name:"PBKDF2",salt:un64(salt),iterations:100000,hash:"SHA-256"},key,256);
   const a = new Uint8Array(bits), b = un64(expected);
   return a.length===b.length && a.every((v,i)=>v===b[i]);
+}
+async function migrateDemoPasswordHashes(env) {
+  await env.DB.prepare("UPDATE users SET password_salt=?,password_hash=? WHERE id IN ('user-admin','user-hod','user-lecturer','user-student') AND password_salt=? AND password_hash=?")
+    .bind(DEMO_NEW_SALT,DEMO_NEW_HASH,DEMO_OLD_SALT,DEMO_OLD_HASH).run();
 }
 function cookieValue(request) {
   const raw=request.headers.get("Cookie")||"";
@@ -43,7 +51,9 @@ async function api(request,env) {
   if(method==="POST" && path==="/api/auth/login") {
     const data=await body(request), email=String(data.email||"").trim().toLowerCase(), password=String(data.password||"");
     if(!email || !password || password.length>200) return fail("Enter your email and password.");
-    const user=await env.DB.prepare("SELECT id,email,full_name,password_salt,password_hash,role FROM users WHERE email=? AND is_active=1").bind(email).first();
+    await migrateDemoPasswordHashes(env);
+    await migrateDemoPasswordHashes(env);
+  const user=await env.DB.prepare("SELECT id,email,full_name,password_salt,password_hash,role FROM users WHERE email=? AND is_active=1").bind(email).first();
     if(!user || !await passwordMatches(password,user.password_salt,user.password_hash)) return fail("Invalid email or password.",401);
     const token=b64(crypto.getRandomValues(new Uint8Array(32)));
     await env.KV.put("session:"+token,JSON.stringify({userId:user.id}),{expirationTtl:SESSION_SECONDS});
