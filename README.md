@@ -13,7 +13,8 @@ A Cloudflare Workers + D1 + KV MVP for student course registration, lecturer res
 1. **Student** — secure sign-in, semester course catalogue, level validation, duplicate-safe registration, course-count safety limit, credit-unit summary, published result view, print-friendly page.
 2. **Lecturer** — assigned-course list, registered-student roster, CA (0–30) and exam (0–70) score entry, server-calculated totals and grades, draft save, submit for review, submitted-result lock.
 3. **Department administrator / administrator** — department-scoped submission queue, score-sheet review, approve, reject with feedback, reopen, and publication to student result endpoints.
-4. **Administration** — system administrator can configure grading bands with complete 0–100 coverage, no gaps/overlaps, grade-point validation and protection against deleting grades used by existing results. Department administrators can view the active scale.\n5. **Shared** — PBKDF2-SHA256 password verification (310,000 iterations), HttpOnly/Secure/SameSite session cookie, KV-backed 8-hour sessions, backend role checks, same-origin checks on state-changing API requests, parameterized D1 queries, escaped dynamic table content, API error boundary, audit log writes, and five-point weighted CGPA calculation. The sign-in form now uses POST as a no-JavaScript fallback; credentials are not submitted in the URL.
+4. **Administration** — system administrator can configure grading bands with complete 0–100 coverage, no gaps/overlaps, grade-point validation and protection against deleting grades used by existing results. Department administrators can view the active scale.
+5. **Shared** — PBKDF2-SHA256 password verification (310,000 iterations), HttpOnly/Secure/SameSite session cookie, KV-backed 8-hour sessions, backend role checks, same-origin checks on state-changing API requests, parameterized D1 queries, escaped dynamic table content, API error boundary, audit log writes, and five-point weighted CGPA calculation. The sign-in form now uses POST as a no-JavaScript fallback; credentials are not submitted in the URL.
 
 ## Cloudflare resources
 
@@ -87,7 +88,9 @@ The currently deployed Worker was uploaded through the Cloudflare API; no Wrangl
 | GET | `/api/lecturer/courses` | Lecturer |
 | GET | `/api/lecturer/roster?offering=...` | Assigned lecturer |
 | POST | `/api/lecturer/results/save` | Assigned lecturer |
-| GET | `/api/admin/overview` | Department admin / admin |\n| GET | `/api/admin/grading-scale` | Department admin / admin |\n| POST | `/api/admin/grading-scale` | System administrator |
+| GET | `/api/admin/overview` | Department admin / admin |
+| GET | `/api/admin/grading-scale` | Department admin / admin |
+| POST | `/api/admin/grading-scale` | System administrator |
 | GET | `/api/admin/submissions` | Department admin / admin |
 | GET | `/api/admin/submission?id=...` | Department admin / admin |
 | POST | `/api/admin/review` | Department admin / admin |
