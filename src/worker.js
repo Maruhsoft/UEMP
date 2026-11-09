@@ -236,7 +236,8 @@ async function formLogin(request,env) {
   await audit(env,user,"auth.login","session",token.slice(0,12));
   return new Response(null,{status:303,headers:{"Location":"/","Cache-Control":"no-store","Set-Cookie":COOKIE+"="+encodeURIComponent(token)+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age="+SESSION_SECONDS}});
 }
-\nexport default {
+
+export default {
  async fetch(request,env) {
   const url=new URL(request.url);
   if(url.pathname==="/login" && request.method==="POST") {
