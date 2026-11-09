@@ -10,10 +10,10 @@ A Cloudflare Workers + D1 + KV MVP for student course registration, lecturer res
 
 ## Implemented workflows
 
-1. **Student** — secure sign-in, semester course catalogue, level validation, duplicate-safe registration, credit-unit summary, published result view, print-friendly page.
+1. **Student** — secure sign-in, semester course catalogue, level validation, duplicate-safe registration, course-count safety limit, credit-unit summary, published result view, print-friendly page.
 2. **Lecturer** — assigned-course list, registered-student roster, CA (0–30) and exam (0–70) score entry, server-calculated totals and grades, draft save, submit for review, submitted-result lock.
 3. **Department administrator / administrator** — department-scoped submission queue, score-sheet review, approve, reject with feedback, reopen, and publication to student result endpoints.
-4. **Shared** — PBKDF2-SHA256 password verification (310,000 iterations), HttpOnly/Secure/SameSite session cookie, KV-backed 8-hour sessions, backend role checks, parameterized D1 queries, audit log writes, and five-point weighted CGPA calculation.
+4. **Shared** — PBKDF2-SHA256 password verification (310,000 iterations), HttpOnly/Secure/SameSite session cookie, KV-backed 8-hour sessions, backend role checks, same-origin checks on state-changing API requests, parameterized D1 queries, escaped dynamic table content, API error boundary, audit log writes, and five-point weighted CGPA calculation. The sign-in form now uses POST as a no-JavaScript fallback; credentials are not submitted in the URL.
 
 ## Cloudflare resources
 
@@ -34,9 +34,9 @@ Migrations are in `migrations/` and should be applied in numeric order:
 1. `0001_initial_schema.sql` — tables, constraints, indexes, department/program/session/semester and grading scale.
 2. `0002_demo_seed.sql` — fictitious Computer Science department, student, lecturer, administrator accounts, course offerings and registrations.
 
-The schema migration has been applied to the provisioned D1 database. The demo seed migration is committed but **has not been applied to the live D1 database yet**. Apply it in the Cloudflare dashboard under **Workers & Pages → D1 → uemp-mvp-db → Console** after the schema is present. The seed uses a shared demo-only password and must never be reused in a production environment.
+Both migrations have now been applied to the live D1 database. Verified live counts: 4 users, 1 student, 1 lecturer, 4 courses, 4 course offerings and 3 course registrations. Foreign-key check returned no violations. The seed uses a shared demo-only password and must never be reused in a production environment.
 
-### Demo accounts (after applying migration 0002)
+### Demo accounts
 
 All four demo accounts use the demo-only password:
 
@@ -76,7 +76,7 @@ The currently deployed Worker was uploaded through the Cloudflare API; no Wrangl
 
 | Method | Endpoint | Role |
 |---|---|---|
-| POST | `/api/auth/login` | Public |
+| POST | `/api/auth/login` | Public (JSON) |\n| POST | `/login` | Public (HTML form fallback) |
 | POST | `/api/auth/logout` | Authenticated session |
 | GET | `/api/me` | Authenticated |
 | GET | `/api/student/courses` | Student |
@@ -102,8 +102,8 @@ Default scale is configurable in `grading_scales`: A 70–100 (5), B 60–69 (4)
 - This is a demo MVP, not yet a production university deployment.
 - Apply migration 0002 before using the demo logins.
 - Course and academic setup is seeded; full admin CRUD for departments, programmes, sessions, courses, enrolments and user provisioning is not yet part of this first slice.
-- Turnstile, password reset/email delivery, MFA, rate limiting, advanced CSRF/origin controls, R2 document upload, queue consumers, PDF transcript generation and automated CI/CD deployment remain follow-up hardening tasks.
-- Review the security checklist before onboarding real users.
+- Turnstile, password reset/email delivery, MFA, rate limiting, CSRF tokens and login rate limiting, R2 document upload, queue consumers, PDF transcript generation and automated CI/CD deployment remain follow-up hardening tasks.
+- Runtime login and role-by-role browser E2E checks still need to be completed against the live portal; successful deployment and database verification alone do not establish that every browser workflow passes.\n- Review the security checklist before onboarding real users.
 
 ## Security notes
 
