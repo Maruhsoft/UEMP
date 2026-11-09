@@ -55,7 +55,7 @@ These are fictitious test identities. Do not use them for real student or staff 
 
 See [docs/architecture.md](docs/architecture.md) and [docs/erd.md](docs/erd.md).
 
-- Worker serves the responsive portal and same-origin JSON API.
+- Worker serves the responsive portal, its same-origin `src/app.js` frontend asset, and the JSON API.
 - D1 stores users, academic structure, registrations, result submissions, results, grading rules and audit events.
 - KV stores opaque, expiring session records.
 - R2 and Queues are reserved for subsequent file and asynchronous features.
@@ -103,7 +103,7 @@ Default scale is configurable in `grading_scales`: A 70–100 (5), B 60–69 (4)
 - Apply migration 0002 before using the demo logins.
 - Course and academic setup is seeded; full admin CRUD for departments, programmes, sessions, courses, enrolments and user provisioning is not yet part of this first slice.
 - Turnstile, password reset/email delivery, MFA, rate limiting, CSRF tokens and login rate limiting, R2 document upload, queue consumers, PDF transcript generation and automated CI/CD deployment remain follow-up hardening tasks.
-- Runtime login and role-by-role browser E2E checks still need to be completed against the live portal; successful deployment and database verification alone do not establish that every browser workflow passes.\n- Review the security checklist before onboarding real users.
+- The live `/api/health` endpoint has returned HTTP 200 from Cloudflare Browser Rendering. The sign-in and role-by-role workflow checks remain in the manual smoke-test queue; deployment and database verification alone do not establish that every browser workflow passes.\n- Review the security checklist before onboarding real users.
 
 ## Security notes
 
