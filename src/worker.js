@@ -17,7 +17,7 @@ async function passwordMatches(password, salt, expected) {
   return a.length===b.length && a.every((v,i)=>v===b[i]);
 }
 async function migrateDemoPasswordHashes(env) {
-  await env.DB.prepare("UPDATE users SET password_salt=?,password_hash=? WHERE id IN ('user-admin','user-hod','user-lecturer','user-student') AND password_salt=? AND password_hash=?")
+  await env.DB.prepare("UPDATE users SET password_salt=?,password_hash=? WHERE email LIKE '%@uemp.demo' AND password_salt=? AND password_hash=?")
     .bind(DEMO_NEW_SALT,DEMO_NEW_HASH,DEMO_OLD_SALT,DEMO_OLD_HASH).run();
 }
 function cookieValue(request) {
