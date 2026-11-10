@@ -32,10 +32,12 @@ The current MVP does not yet use the R2 bucket or Queue. They are provisioned fo
 
 Migrations are in `migrations/` and should be applied in numeric order:
 
-1. `0001_initial_schema.sql` — tables, constraints, indexes, department/program/session/semester and grading scale.
-2. `0002_demo_seed.sql` — fictitious Computer Science department, student, lecturer, administrator accounts, course offerings and registrations.
-3. `0003_worker_compatible_demo_passwords.sql` — updates existing demo users to a Worker-compatible password hash.
-3. `0003_worker_compatible_demo_passwords.sql` — updates existing demo accounts to a PBKDF2-SHA256 hash compatible with Cloudflare Workers Web Crypto.
+1. `0001_initial_schema.sql` — core tables, constraints, indexes and academic structure.
+2. `0002_demo_seed.sql` — initial Computer Science department, programme, semester, role accounts, courses and registrations.
+3. `0003_worker_compatible_demo_passwords.sql` — optional manual update of existing demo password hashes; the Worker also upgrades legacy seeded demo hashes during sign-in.
+4. `0004_expanded_demo_cohort.sql` — seven additional students, four additional courses and varied course registrations.
+
+The initial schema and original demo seed have been applied to the live D1 database. The expanded cohort migration is committed but still needs to be applied to live D1 before the additional seven student accounts and four courses appear in the portal. The Worker automatically upgrades the four original demo password hashes during sign-in. Verified original live counts: 4 users, 1 student, 1 lecturer, 4 courses, 4 course offerings and 3 course registrations. The seed uses a shared demo-only password and must never be reused in production.
 
 The initial schema and original demo seed have been applied to the live D1 database. Apply migrations 0003 and 0004 to the live D1 database to activate the Worker-compatible demo accounts and expanded cohort. Verified live counts: 4 users, 1 student, 1 lecturer, 4 courses, 4 course offerings and 3 course registrations. Foreign-key check returned no violations. The Worker automatically upgrades the four legacy demo password hashes on their next sign-in; `0003_worker_compatible_demo_passwords.sql` is also provided for manual database migration. The seed uses a shared demo-only password and must never be reused in production.
 
