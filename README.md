@@ -37,7 +37,11 @@ Migrations are in `migrations/` and should be applied in numeric order:
 3. `0003_worker_compatible_demo_passwords.sql` — updates existing demo users to a Worker-compatible password hash.
 3. `0003_worker_compatible_demo_passwords.sql` — updates existing demo accounts to a PBKDF2-SHA256 hash compatible with Cloudflare Workers Web Crypto.
 
-The initial schema and demo seed have been applied to the live D1 database. Verified live counts: 4 users, 1 student, 1 lecturer, 4 courses, 4 course offerings and 3 course registrations. Foreign-key check returned no violations. The Worker automatically upgrades the four legacy demo password hashes on their next sign-in; `0003_worker_compatible_demo_passwords.sql` is also provided for manual database migration. The seed uses a shared demo-only password and must never be reused in production.
+The initial schema and original demo seed have been applied to the live D1 database. Apply migrations 0003 and 0004 to the live D1 database to activate the Worker-compatible demo accounts and expanded cohort. Verified live counts: 4 users, 1 student, 1 lecturer, 4 courses, 4 course offerings and 3 course registrations. Foreign-key check returned no violations. The Worker automatically upgrades the four legacy demo password hashes on their next sign-in; `0003_worker_compatible_demo_passwords.sql` is also provided for manual database migration. The seed uses a shared demo-only password and must never be reused in production.
+
+### Guided demonstration
+
+Follow [`docs/demo-guide.md`](docs/demo-guide.md) for the complete student registration → lecturer result entry → departmental approval/rejection → student publication walkthrough, sample score sheets and validation checklist.
 
 ### Demo accounts
 
