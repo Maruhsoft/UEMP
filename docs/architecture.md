@@ -15,7 +15,7 @@ The Worker serves the application shell and API from one origin. The browser doe
 
 ## Authentication and authorization
 
-- Passwords are verified using PBKDF2-HMAC-SHA256 with 310,000 iterations and a per-seed salt.
+- Passwords are verified using PBKDF2-HMAC-SHA256 with 100,000 iterations (the Cloudflare Workers Web Crypto maximum) and a salt stored with each account.
 - Successful login creates a cryptographically random opaque session identifier.
 - The cookie is HttpOnly, Secure, SameSite=Lax, and scoped to the application path.
 - Session records are stored in KV with an eight-hour expiration.
