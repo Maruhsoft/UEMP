@@ -52,8 +52,7 @@ async function api(request,env) {
     const data=await body(request), email=String(data.email||"").trim().toLowerCase(), password=String(data.password||"");
     if(!email || !password || password.length>200) return fail("Enter your email and password.");
     await migrateDemoPasswordHashes(env);
-    await migrateDemoPasswordHashes(env);
-  const user=await env.DB.prepare("SELECT id,email,full_name,password_salt,password_hash,role FROM users WHERE email=? AND is_active=1").bind(email).first();
+    const user=await env.DB.prepare("SELECT id,email,full_name,password_salt,password_hash,role FROM users WHERE email=? AND is_active=1").bind(email).first();
     if(!user || !await passwordMatches(password,user.password_salt,user.password_hash)) return fail("Invalid email or password.",401);
     const token=b64(crypto.getRandomValues(new Uint8Array(32)));
     await env.KV.put("session:"+token,JSON.stringify({userId:user.id}),{expirationTtl:SESSION_SECONDS});
@@ -244,6 +243,7 @@ async function formLogin(request,env) {
   const email=String(form.get("email")||"").trim().toLowerCase();
   const password=String(form.get("password")||"");
   if(!email || !password || password.length>200) return new Response(page.replace('<div id="loginmsg" class="muted"></div>','<div id="loginmsg" class="error">Enter your email and password.</div>'),{status:400,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
+  await migrateDemoPasswordHashes(env);
   const user=await env.DB.prepare("SELECT id,email,full_name,password_salt,password_hash,role FROM users WHERE email=? AND is_active=1").bind(email).first();
   if(!user || !await passwordMatches(password,user.password_salt,user.password_hash)) {
     const html=page.replace('<div id="loginmsg" class="muted"></div>','<div id="loginmsg" class="error">Invalid email or password. Please try again.</div>');
