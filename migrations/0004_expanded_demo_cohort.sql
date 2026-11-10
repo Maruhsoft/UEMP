@@ -1,12 +1,18 @@
 -- Expanded fictional UEMP demonstration cohort. Safe to re-run.
-INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id) VALUES
-('user-student-002','amina.yusuf@uemp.demo','Amina Yusuf','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs'),
-('user-student-003','david.eze@uemp.demo','David Eze','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs'),
-('user-student-004','fatima.bello@uemp.demo','Fatima Bello','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs'),
-('user-student-005','emeka.nwosu@uemp.demo','Emeka Nwosu','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs'),
-('user-student-006','grace.mensah@uemp.demo','Grace Mensah','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs'),
-('user-student-007','ibrahim.musa@uemp.demo','Ibrahim Musa','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs'),
-('user-student-008','zainab.aliyu@uemp.demo','Zainab Aliyu','WdsprOsw3M_KepzLmyqi3w','JkEDBRqO0kV6eIDuG8uTgOx0GbKZZAkfsWWrKPRR2pc','student','dept-cs');
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-002','amina.yusuf@uemp.demo','Amina Yusuf',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-003','david.eze@uemp.demo','David Eze',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-004','fatima.bello@uemp.demo','Fatima Bello',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-005','emeka.nwosu@uemp.demo','Emeka Nwosu',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-006','grace.mensah@uemp.demo','Grace Mensah',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-007','ibrahim.musa@uemp.demo','Ibrahim Musa',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
+INSERT OR IGNORE INTO users(id,email,full_name,password_salt,password_hash,role,department_id)
+SELECT 'user-student-008','zainab.aliyu@uemp.demo','Zainab Aliyu',password_salt,password_hash,'student','dept-cs' FROM users WHERE id='user-student';
 INSERT OR IGNORE INTO students(user_id,matric_no,program_id,level) VALUES
 ('user-student-002','UEMP/2023/002','prog-cs',300),('user-student-003','UEMP/2023/003','prog-cs',300),
 ('user-student-004','UEMP/2023/004','prog-cs',300),('user-student-005','UEMP/2023/005','prog-cs',300),
